@@ -29,6 +29,10 @@ public class MainActivity extends AppCompatActivity {
 
     private int flags;
 
+    private int cellsVisited = 0;
+
+    private boolean gameOver = false;
+
     private int dpToPixel(int dp) {
         float density = Resources.getSystem().getDisplayMetrics().density;
         return Math.round(dp * density);
@@ -224,8 +228,38 @@ public class MainActivity extends AppCompatActivity {
     private void revealAll() {
         for (int row = 0; row < ROW_COUNT; row++) {
             for (int col = 0; col < COLUMN_COUNT; col++) {
-                cells.get(getId(row, col)).reveal();
+                Cell c = cells.get(getId(row, col));
+
+                if (!c.isBomb() || !c.isRevealed()) {
+                    cells.get(getId(row, col)).reveal();
+                }
             }
+        }
+    }
+
+    private void floodReveal(int id) {
+        // Base case: Check for out-of-bounds or non-'0' cells
+        if (id == -1 || cells.get(id).isRevealed()) {         // CORRECT?
+            return;
+        }
+
+        // reveal cell at id
+        cells.get(id).reveal();
+        cellsVisited ++;
+
+        int row = getRow(id);
+        int col = getCol(id);
+
+        // if cell is not numbered, recursively visit adjacent cells
+        if (cells.get(id).getAdjacentBombs() == 0) {
+            floodReveal(getId (row - 1, col - 1));  // upper left
+            floodReveal(getId (row - 1, col));// upper
+            floodReveal(getId (row - 1, col + 1)); // upper right
+            floodReveal(getId (row, col + 1));// right
+            floodReveal(getId (row + 1, col + 1));// lower right
+            floodReveal(getId (row + 1, col));// lower
+            floodReveal(getId (row + 1, col - 1));// lower left
+            floodReveal(getId (row, col - 1));// left
         }
     }
 
@@ -265,11 +299,16 @@ public class MainActivity extends AppCompatActivity {
         }
         */
 
-        if (mode==0) {
-            selectingAction(c);
+        if (gameOver) {
+            // TRIGGER END PAGE
         }
         else {
-            flaggingAction(c);
+            if (mode==0) {
+                selectingAction(c);
+            }
+            else {
+                flaggingAction(c);
+            }
         }
     }
 
@@ -279,7 +318,12 @@ public class MainActivity extends AppCompatActivity {
                 destruction(c);
             }
             else {
-                c.reveal();
+                floodReveal(c.ID);
+
+                // check if won
+                if (cellsVisited >= ROW_COUNT * COLUMN_COUNT - BOMBS) {
+                    // WIN CONDITION
+                }
             }
         }
     }
@@ -287,7 +331,7 @@ public class MainActivity extends AppCompatActivity {
     private void flaggingAction(Cell c) {
         if (!c.isRevealed()) {          // can only flag if cell is not yet revealed
             if (c.isFlagged()) {            // if c is flagged, unflag
-                c.unflag();
+                c.unFlag();
                 flags ++;
                 updateFlagCount();
             }
@@ -301,7 +345,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void destruction(Cell c) {
+    private void destruction(Cell c) {          // losing condition
         c.reveal();
         c.tv.setBackgroundColor(Color.RED);
 

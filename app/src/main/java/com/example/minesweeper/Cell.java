@@ -56,7 +56,7 @@ public class Cell {
         tv.setText(context.getString(R.string.flag));
     }
 
-    public void unflag() {
+    public void unFlag() {
         isFlagged = false;
         tv.setText("");
     }
