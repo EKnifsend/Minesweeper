@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 
@@ -137,49 +136,16 @@ public class MainActivity extends AppCompatActivity {
 
         cells = new ArrayList<Cell>();
 
+        // set flags
         flags = BOMBS;
         updateFlagCount();
 
         // generate bomb locations
         createBombs();
 
-        /*
-        // Method (1): add statically created cells
-        TextView tv00 = (TextView) findViewById(R.id.textView00);
-        TextView tv01 = (TextView) findViewById(R.id.textView01);
-        TextView tv10 = (TextView) findViewById(R.id.textView10);
-        TextView tv11 = (TextView) findViewById(R.id.textView11);
-
-        tv00.setTextColor(Color.GRAY);
-        tv00.setBackgroundColor(Color.GRAY);
-        tv00.setOnClickListener(this::onClickTV);
-
-        tv01.setTextColor(Color.GRAY);
-        tv01.setBackgroundColor(Color.GRAY);
-        tv01.setOnClickListener(this::onClickTV);
-
-        tv10.setTextColor(Color.GRAY);
-        tv10.setBackgroundColor(Color.GRAY);
-        tv10.setOnClickListener(this::onClickTV);
-
-        tv11.setTextColor(Color.GRAY);
-        tv11.setBackgroundColor(Color.GRAY);
-        tv11.setOnClickListener(this::onClickTV);
-
-        cell_tvs.add(tv00);
-        cell_tvs.add(tv01);
-        cell_tvs.add(tv10);
-        cell_tvs.add(tv11);
-         */
-
+        // wire bottom button
         TextView bottomButton = (TextView) findViewById(R.id.bottomButton);
         bottomButton.setOnClickListener(this::changeMode);
-
-        /*
-        TextView timerCount = (TextView) findViewById(R.id.timerCount);
-        timer = new Timer(this, timerCount);
-        timer.startTimer();
-         */
 
         // Create Timer
         timerCount = (TextView) findViewById(R.id.timerCount);
@@ -199,8 +165,10 @@ public class MainActivity extends AppCompatActivity {
         };
         timer.scheduleAtFixedRate(timerTask, 0, 1000);
 
-        // Method (2): add four dynamically created cells
+        // Make cells
         GridLayout grid = (GridLayout) findViewById(R.id.gridLayout01);
+        grid.setRowCount(ROW_COUNT);
+        grid.setColumnCount(COLUMN_COUNT);
         for (int row = 0; row < ROW_COUNT; row++) {
             for (int col = 0; col < COLUMN_COUNT; col++) {
                 TextView tv = new TextView(this);
@@ -233,29 +201,6 @@ public class MainActivity extends AppCompatActivity {
                 grid.addView(cells.get(id).tv, lp);
             }
         }
-
-        /*
-        // Method (3): add four dynamically created cells with LayoutInflater
-        LayoutInflater li = LayoutInflater.from(this);
-        for (int i = 4; i<=5; i++) {
-            for (int j=0; j<=1; j++) {
-                TextView tv = (TextView) li.inflate(R.layout.custom_cell_layout, grid, false);
-                //tv.setText(String.valueOf(i)+String.valueOf(j));
-                tv.setTextColor(Color.GRAY);
-                tv.setBackgroundColor(Color.GRAY);
-                tv.setOnClickListener(this::onClickTV);
-
-                GridLayout.LayoutParams lp = (GridLayout.LayoutParams) tv.getLayoutParams();
-                lp.rowSpec = GridLayout.spec(i);
-                lp.columnSpec = GridLayout.spec(j);
-
-                grid.addView(tv, lp);
-
-                cell_tvs.add(tv);
-            }
-        }
-         */
-
     }
 
     private void updateTimerCount() {
@@ -267,7 +212,8 @@ public class MainActivity extends AppCompatActivity {
             for (int col = 0; col < COLUMN_COUNT; col++) {
                 Cell c = cells.get(getId(row, col));
 
-                if (!c.isBomb() || !c.isRevealed()) {
+                if (!c.isBomb() || !c.isRevealed()) {       // only don't reveal if c is bomb and
+                    // already revealed
                     cells.get(getId(row, col)).reveal();
                 }
             }
@@ -278,6 +224,13 @@ public class MainActivity extends AppCompatActivity {
         // Base case: Check for out-of-bounds or non-'0' cells
         if (id == -1 || cells.get(id).isRevealed()) {         // CORRECT?
             return;
+        }
+
+        // if cell at id is flagged, return flag
+        if (cells.get(id).isFlagged()) {
+            cells.get(id).unFlag();
+            flags++;
+            updateFlagCount();
         }
 
         // reveal cell at id
@@ -303,11 +256,11 @@ public class MainActivity extends AppCompatActivity {
     public void changeMode(View view){
         TextView tv = (TextView) view;
 
-        if (mode == 0) {    // currently selecting
+        if (mode == 0) {    // currently selecting, switch to flagging
             mode = 1;
             tv.setText(getString(R.string.flag));
         }
-        else {              // currently flagging
+        else {              // currently flagging, switch to selecting
             mode = 0;
             tv.setText(getString(R.string.pick));
         }
@@ -324,43 +277,31 @@ public class MainActivity extends AppCompatActivity {
     public void onClickTV(View view){
         TextView tv = (TextView) view;
         int n = findIndexOfCellTextView(tv);
-        //int i = n/COLUMN_COUNT;
-        //int j = n%COLUMN_COUNT;
-        //tv.setText(String.valueOf(i)+String.valueOf(j));
-
         Cell c = cells.get(n);
-        /*
-        if (tv.getCurrentTextColor() == Color.GREEN) {
 
-        }else {
-        }
-        */
-
-        if (gameOver) {
-            // TRIGGER END PAGE
+        if (gameOver) {         // if game over, trigger end page
             endGame();
         }
-        else {
-            if (mode==0) {
+        else {                  // otherwise, do action based on mode
+            if (mode==0) {          // if selecting
                 selectingAction(c);
             }
-            else {
+            else {                  // if flagging
                 flaggingAction(c);
             }
         }
     }
 
     private void selectingAction(Cell c) {
-        if (!c.isFlagged()) {
-            if (c.isBomb()) {
+        if (!c.isFlagged()) {       // only make able to select if unflagged
+            if (c.isBomb()) {           // if cell is a bomb, trigger losing scenario
                 destruction(c);
             }
-            else {
+            else {                      // otherwise, reveal cell
                 floodReveal(c.ID);
 
-                // check if won
-                if (cellsVisited >= ROW_COUNT * COLUMN_COUNT - BOMBS) {
-                    // WIN CONDITION
+                if (cellsVisited >= ROW_COUNT * COLUMN_COUNT - BOMBS) {     // if all non-bomb cells
+                    // have been selected, trigger winning scenario
                     victory();
                 }
             }
@@ -384,26 +325,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void victory() {          // winning condition
+    // winning scenario
+    private void victory() {
         // stop timer
         timer.cancel();
 
         gameOver = true;
     }
 
-    private void destruction(Cell c) {          // losing condition
-        c.reveal();
-        c.tv.setBackgroundColor(Color.RED);
-
+    // losing scenario
+    private void destruction(Cell c) {
         // stop timer
         timer.cancel();
+
         revealAll();
+        c.tv.setBackgroundColor(Color.RED);
 
         gameOver = true;
         gameLost = true;
     }
 
     private void endGame() {
+        // make ending message
         String message = "Used " + timeElapsed + " seconds.\n";
 
         if (!gameLost) {
@@ -413,6 +356,7 @@ public class MainActivity extends AppCompatActivity {
             message += "You lost.\nBetter luck next time!";
         }
 
+        // call results page activity
         Intent intent = new Intent(this, DisplayResultsActivity.class);
         intent.putExtra("message", message);
 

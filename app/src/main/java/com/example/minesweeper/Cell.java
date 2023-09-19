@@ -26,8 +26,6 @@ public class Cell {
         this.adjacentBombs = adjacentBombs;
         this.tv = tv;
 
-        adjacentBombs = 1;
-
         setDisplay();
     }
 
@@ -74,6 +72,7 @@ public class Cell {
 
     public void reveal() {
         revealed = true;
+        isFlagged = false;
 
         tv.setTextColor(Color.GRAY);
         tv.setBackgroundColor(Color.LTGRAY);
