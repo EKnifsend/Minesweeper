@@ -12,6 +12,8 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -25,6 +27,11 @@ public class MainActivity extends AppCompatActivity {
 
     private ArrayList<Integer> bombLocations;
 
+    Timer timer;
+    TimerTask timerTask;
+    TextView timerCount;
+    private int timeElapsed = 0;
+
     private int mode = 0;   // mode == 0 means they are selecting, mode == 1 means they are flagging
 
     private int flags;
@@ -32,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private int cellsVisited = 0;
 
     private boolean gameOver = false;
+    private boolean gameLost = false;
 
     private int dpToPixel(int dp) {
         float density = Resources.getSystem().getDisplayMetrics().density;
@@ -166,6 +174,30 @@ public class MainActivity extends AppCompatActivity {
         TextView bottomButton = (TextView) findViewById(R.id.bottomButton);
         bottomButton.setOnClickListener(this::changeMode);
 
+        /*
+        TextView timerCount = (TextView) findViewById(R.id.timerCount);
+        timer = new Timer(this, timerCount);
+        timer.startTimer();
+         */
+
+        // Create Timer
+        timerCount = (TextView) findViewById(R.id.timerCount);
+
+        timer = new Timer();
+        timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                timeElapsed++;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateTimerCount();
+                    }
+                });
+            }
+        };
+        timer.scheduleAtFixedRate(timerTask, 0, 1000);
+
         // Method (2): add four dynamically created cells
         GridLayout grid = (GridLayout) findViewById(R.id.gridLayout01);
         for (int row = 0; row < ROW_COUNT; row++) {
@@ -223,6 +255,10 @@ public class MainActivity extends AppCompatActivity {
         }
          */
 
+    }
+
+    private void updateTimerCount() {
+        timerCount.setText(String.valueOf(timeElapsed));
     }
 
     private void revealAll() {
@@ -323,6 +359,7 @@ public class MainActivity extends AppCompatActivity {
                 // check if won
                 if (cellsVisited >= ROW_COUNT * COLUMN_COUNT - BOMBS) {
                     // WIN CONDITION
+                    victory();
                 }
             }
         }
@@ -345,11 +382,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void victory() {          // winning condition
+        // stop timer
+        timer.cancel();
+
+        gameOver = true;
+    }
+
     private void destruction(Cell c) {          // losing condition
         c.reveal();
         c.tv.setBackgroundColor(Color.RED);
 
         // stop timer
+        timer.cancel();
         revealAll();
+
+        gameOver = true;
+        gameLost = true;
     }
 }
