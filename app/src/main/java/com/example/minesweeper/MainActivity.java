@@ -3,6 +3,7 @@ package com.example.minesweeper;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.gridlayout.widget.GridLayout;
 
+import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -337,6 +338,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (gameOver) {
             // TRIGGER END PAGE
+            endGame();
         }
         else {
             if (mode==0) {
@@ -399,5 +401,21 @@ public class MainActivity extends AppCompatActivity {
 
         gameOver = true;
         gameLost = true;
+    }
+
+    private void endGame() {
+        String message = "Used " + timeElapsed + " seconds.\n";
+
+        if (!gameLost) {
+            message += "You won.\nGood job!";
+        }
+        else {
+            message += "You lost.\nBetter luck next time!";
+        }
+
+        Intent intent = new Intent(this, DisplayResultsActivity.class);
+        intent.putExtra("message", message);
+
+        startActivity(intent);
     }
 }
